@@ -4,68 +4,53 @@
 
 #define BUFFER_SZ 50
 
-//prototypes
+// Prototypes
 void usage(char *);
 void print_buff(char *, int);
-int  setup_buff(char *, char *, int);
-
-//prototypes for functions to handle required functionality
-int  count_words(char *, int);
+int setup_buff(char *, char *, int);
+int count_words(char *, int, int);
 void reverse_string(char *, int);
 void write_to_file(char *, char *, int);
+void print_words(char *, int);
+void replace_string(char *, char *, char *, int);
 
-// Function to set up buffer with the provided user string
+// Helper functions
+
+void usage(char *exename) {
+    printf("usage: %s [-h|c|r|w|x] \"string\" [other args]\n", exename);
+}
+
 int setup_buff(char *buff, char *user_str, int len) {
-    //TODO: #4:  Implement the setup buff as per the directions
     int i;
     for (i = 0; i < len - 1 && user_str[i] != '\0'; i++) {
         buff[i] = user_str[i];
     }
     buff[i] = '\0';
-    return i; //for now just so the code compiles. 
+    return i;  // For now just so the code compiles. 
 }
 
-// Function to print the buffer contents
-void print_buff(char *buff, int len) {
-    printf("Buffer:  ");
-    for (int i = 0; i < len; i++) {
-        putchar(*(buff + i));
-    }
-    putchar('\n');
-}
-
-// Function to display usage instructions
-void usage(char *exename) {
-    printf("usage: %s [-h|c|r|w|x] \"string\" [other args]\n", exename);
-}
-
-// Function to count words in the buffer
-int count_words(char *buff, int len) {
+int count_words(char *buff, int len, int str_len) {
     int count = 0;
     int in_word = 0;
 
-    for (int i = 0; i < len; i++) {
+    for (int i = 0; i < str_len; i++) {
         if (buff[i] != ' ' && buff[i] != '\t' && buff[i] != '\n') {
             if (!in_word) {
                 in_word = 1; 
                 count++;
             }
         } else {
-            in_word = 0; 
+            in_word = 0;
         }
     }
     return count;
 }
 
-// Function to reverse the string in the buffer
 void reverse_string(char *buff, int len) {
     int start = 0;
     int end = len - 1;
-    char temp;
-
-    // Reverse the buffer in-place
     while (start < end) {
-        temp = buff[start];
+        char temp = buff[start];
         buff[start] = buff[end];
         buff[end] = temp;
         start++;
@@ -73,34 +58,86 @@ void reverse_string(char *buff, int len) {
     }
 }
 
-// Function to write the buffer content to a file
 void write_to_file(char *filename, char *buff, int len) {
     FILE *file = fopen(filename, "w");
     if (file == NULL) {
-        printf("Error: Could not open file for writing.\n");
-        exit(1);
+        printf("Error opening file for writing\n");
+        exit(99);
     }
-    fwrite(buff, sizeof(char), len, file);
+    fprintf(file, "%s\n", buff);
     fclose(file);
+    printf("Written to file %s\n", filename);
+}
+
+void print_words(char *buff, int len) {
+    char word[BUFFER_SZ];
+    int word_index = 0;
+    for (int i = 0; i < len; i++) {
+        if (buff[i] != ' ' && buff[i] != '\t' && buff[i] != '\n' && buff[i] != '\0') {
+            word[word_index++] = buff[i];
+        } else {
+            if (word_index > 0) {
+                word[word_index] = '\0';
+                printf("Word: %s, Length: %d\n", word, word_index);
+                word_index = 0;
+            }
+        }
+    }
+    if (word_index > 0) {
+        word[word_index] = '\0';
+        printf("Word: %s, Length: %d\n", word, word_index);
+    }
+}
+
+void replace_string(char *buff, int len, const char *old_sub, const char *new_sub) {
+    char temp[BUFFER_SZ];
+    char *pos;
+    int old_sub_len = strlen(old_sub);
+    int new_sub_len = strlen(new_sub);
+    int i = 0, j = 0;
+
+    while ((pos = strstr(buff + i, old_sub)) != NULL) {
+        // Copy characters before the match
+        while (buff + i < pos) {
+            temp[j++] = buff[i++];
+        }
+        // Copy the new substring
+        for (int k = 0; k < new_sub_len; k++) {
+            temp[j++] = new_sub[k];
+        }
+        // Move past the old substring
+        i += old_sub_len;
+    }
+
+    // Copy the remaining part of the string
+    while (buff[i] != '\0') {
+        temp[j++] = buff[i++];
+    }
+
+    temp[j] = '\0';
+
+    // Copy the modified string back into the buffer
+    strncpy(buff, temp, len - 1);
+    buff[len - 1] = '\0';
 }
 
 int main(int argc, char *argv[]) {
-    char *buff;             // Placeholder for the internal buffer
-    char *input_string;     // Holds the string provided by the user on cmd line
-    char opt;               // Used to capture user option from cmd line
-    int rc;                 // Used for return codes
-    int user_str_len;       // Length of user supplied string
+    char *buff; 
+    char *input_string;
+    char opt;
+    int rc;
+    int user_str_len;
 
-    // TODO: #1. WHY IS THIS SAFE, aka what if arv[1] does not exist?
-    // This code checks if there are at least two arguments and the first argument starts with 
-    // a dash. Without this, trying to use argv[1] would cause undefined behavior.
+    // TODO: #1. WHY IS THIS SAFE, aka what if argv[1] does not exist?
+    // This code checks if there are at least two arguments and if the first argument starts with 
+    // a dash. Without this, when trying to use argv[1], it would cause undefined behavior.
     // This check ensures the program exits gracefully.
     if ((argc < 2) || (*argv[1] != '-')) {
         usage(argv[0]);
         exit(1);
     }
 
-    opt = (char)*(argv[1] + 1);   // Get the option flag
+    opt = (char)*(argv[1] + 1); // Get the option flag
 
     // Handle the help flag and then exit normally
     if (opt == 'h') {
@@ -108,14 +145,12 @@ int main(int argc, char *argv[]) {
         exit(0);
     }
 
-    // WE NOW WILL HANDLE THE REQUIRED OPERATIONS
-
     // TODO: #2 Document the purpose of the if statement below
     // This ensures that the program has at least three arguments: 
     // the program name, the option flag, and the input string. 
-    // Without this check, argv[2] could be NULL, which would lead 
-    // to undefined behavior when the program tries to access it. 
-    // If the condition is not met, it displays the usage instructions and exits with an error.
+    // Without this check, argv[2] could be NULL, which will lead to undefined behavior 
+    // when the program is accessing it. If the condition is not met, it displays the usage 
+    // instructions and exits with an error.
     if (argc < 3) {
         usage(argv[0]);
         exit(1);
@@ -123,15 +158,15 @@ int main(int argc, char *argv[]) {
 
     input_string = argv[2]; // Capture the user input string
 
-    // TODO: #3 Allocate space for the buffer using malloc and handle error if malloc fails
-    // by exiting with a return code of 99
+    // TODO: #3 Allocate space for the buffer using malloc and
+    // handle error if malloc fails by exiting with a return code of 99
     buff = (char *)malloc(BUFFER_SZ * sizeof(char));
     if (buff == NULL) {
         printf("Error: Memory allocation failed.\n");
         exit(99);
     }
 
-    user_str_len = setup_buff(buff, input_string, BUFFER_SZ); // Set up buffer
+    user_str_len = setup_buff(buff, input_string, BUFFER_SZ);
     if (user_str_len < 0) {
         printf("Error setting up buffer, error = %d", user_str_len);
         exit(2);
@@ -139,10 +174,9 @@ int main(int argc, char *argv[]) {
 
     switch (opt) {
         case 'c':
-            // Use the actual string length for word count
-            rc = count_words(buff, user_str_len);
+            rc = count_words(buff, BUFFER_SZ, user_str_len);
             if (rc < 0) {
-                printf("Error counting words, rc = %d\n", rc);
+                printf("Error counting words, rc = %d", rc);
                 exit(2);
             }
             printf("Word Count: %d\n", rc);
@@ -153,15 +187,21 @@ int main(int argc, char *argv[]) {
             printf("Reversed Buffer: %s\n", buff);
             break;
 
-
         case 'w':
-            if (argc < 4) { // Ensure a filename is provided
-                printf("Error: No filename provided for write operation.\n");
+            print_words(buff, user_str_len);
+            break;
+
+        case 'x':
+            if (argc < 5) {
+                printf("Error: Missing arguments for string replacement.\n");
                 usage(argv[0]);
                 exit(1);
             }
-            write_to_file(argv[3], buff, user_str_len); // Pass user_str_len here
+            printf("Replacing '%s' with '%s' in '%s'\n", argv[3], argv[4], buff);
+            replace_string(buff, BUFFER_SZ, argv[3], argv[4]);
+            printf("Updated Buffer: %s\n", buff);
             break;
+
 
         default:
             usage(argv[0]);
@@ -175,13 +215,19 @@ int main(int argc, char *argv[]) {
 }
 
 // TODO: #7 Notice all of the helper functions provided in the 
-// starter take both the buffer as well as the length.  Why
+// starter take both the buffer as well as the length. Why
 // do you think providing both the pointer and the length
 // is a good practice, after all we know from main() that 
 // the buff variable will have exactly 50 bytes?
-// 
-// PLACE YOUR ANSWER HERE
-// It would reduce the risk of buffer overflow because by passing the length, it makes 
-// the function more generic and adaptable for different buffer sizes. If the buffer size 
+// It would reduce the risk of buffer overload because with passing the length it 
+// makes it more generic and adaptable for different buffer sizes. If the buffer size 
 // changes in the future, functions relying on BUFFER_SZ would need updates. 
 // Passing the length ensures the function always works with the correct size.
+
+void print_buff(char *buff, int len) {
+    printf("Buffer:  ");
+    for (int i = 0; i < len; i++) {
+        putchar(*(buff + i));
+    }
+    putchar('\n');
+}
