@@ -3,26 +3,26 @@ CC = gcc
 CFLAGS = -Wall -Wextra -g
 
 # Target executable name
-TARGET = sdbsc
+TARGET = db_manager
 
-# Find all source and header files
+# Find all source files and header files
 SRCS = $(wildcard *.c)
-HDRS = $(wildcard *.h)
+OBJ = $(SRCS:.c=.o)
 
 # Default target
 all: $(TARGET)
 
 # Compile source to executable
-$(TARGET): $(SRCS) $(HDRS)
-	$(CC) $(CFLAGS) -o $(TARGET) $(SRCS)
+$(TARGET): $(OBJ)
+	$(CC) $(CFLAGS) -o $(TARGET) $(OBJ)
 
 # Clean up build files
 clean:
-	rm -f $(TARGET)
+	rm -f $(OBJ) $(TARGET)
 	rm -f student.db
 
 test:
 	./test.sh
 
 # Phony targets
-.PHONY: all clean
+.PHONY: all clean test
